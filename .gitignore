@@ -1,0 +1,49 @@
+# Build output
+bin/
+obj/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+
+# IDE settings
+.vs/
+.vscode/
+
+# Rider
+.idea/
+
+# Logs
+*.log
+
+# Temporary and cache files
+*.tmp
+*.cache
+
+# ASP.NET local run settings
+Properties/launchSettings.json
+
+# Test and coverage output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# NuGet
+packages/
+*.nupkg
+*.sln.docstates
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Local app data for this assignment
+App_Data/
+data/

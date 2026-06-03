@@ -1,0 +1,280 @@
+@model PUXsp.Web.ViewModels.AnalysisPageViewModel
+
+@{
+    ViewData["Title"] = "Directory Change Analyzer";
+    var result = Model.Result;
+    var statusClass = result switch
+    {
+        null => "status-card status-idle",
+        { IsSuccess: false } => "status-card status-failed",
+        { HasWarnings: true } => "status-card status-warning",
+        _ => "status-card status-success"
+    };
+}
+
+<section class="hero-panel">
+    <div>
+        <p class="eyebrow">PUXdesign Selection Task</p>
+        <h1>Directory Change Analyzer</h1>
+        <p class="hero-copy">
+            Analyze a local directory on demand, compare it with the previous snapshot for the same root,
+            and keep per-file versions based on content changes.
+        </p>
+    </div>
+</section>
+
+<section class="workspace-grid">
+    <div class="panel">
+        <h2>Analyze Directory</h2>
+        <form asp-action="Analyze" method="post" id="analysis-form" novalidate>
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger validation-summary"></div>
+
+            <div class="field-group">
+                <label asp-for="DirectoryPath" class="form-label"></label>
+                <input asp-for="DirectoryPath" class="form-control" placeholder="C:\Projects\Sample" />
+                <span asp-validation-for="DirectoryPath" class="text-danger"></span>
+            </div>
+
+            <div class="field-group field-group-small">
+                <label asp-for="RetryCount" class="form-label"></label>
+                <input asp-for="RetryCount" class="form-control" min="0" max="5" />
+                <span class="field-hint">Retries are used only when a file changes during reading or cannot be read reliably.</span>
+                <span asp-validation-for="RetryCount" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary action-button" id="analysis-submit">
+                Analyze
+            </button>
+
+            <div id="analysis-running" class="running-state" hidden>
+                <span class="running-dot"></span>
+                <span>Analysis in progress. Please wait...</span>
+            </div>
+        </form>
+    </div>
+
+    <div class="@statusClass">
+        <h2>Current Result</h2>
+
+        @if (result is null)
+        {
+            <p class="empty-state">
+                No analysis has been run in this session yet.
+            </p>
+        }
+        else
+        {
+            <div class="summary-grid">
+                <div>
+                    <span class="summary-label">Status</span>
+                    <strong>@result.Status</strong>
+                </div>
+                <div>
+                    <span class="summary-label">Analyzed path</span>
+                    <strong class="path-value">@result.AnalyzedPath</strong>
+                </div>
+                <div>
+                    <span class="summary-label">Started</span>
+                    <strong>@result.StartedAtLocal.ToString("yyyy-MM-dd HH:mm:ss")</strong>
+                </div>
+                <div>
+                    <span class="summary-label">Completed</span>
+                    <strong>@(result.CompletedAtLocal?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</strong>
+                </div>
+                <div>
+                    <span class="summary-label">Duration</span>
+                    <strong>@result.Duration.TotalSeconds.ToString("0.00") s</strong>
+                </div>
+                <div>
+                    <span class="summary-label">Retry count</span>
+                    <strong>@result.RetryCountUsed</strong>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+            {
+                <div class="message-block message-error">
+                    @result.ErrorMessage
+                </div>
+            }
+
+            @if (result.Status == "Baseline created")
+            {
+                <div class="counts-grid">
+                    <div class="count-card">
+                        <span class="count-label">Registered files</span>
+                        <strong>@result.RegisteredFileCount</strong>
+                    </div>
+                    <div class="count-card">
+                        <span class="count-label">Registered directories</span>
+                        <strong>@result.RegisteredDirectoryCount</strong>
+                    </div>
+                    <div class="count-card">
+                        <span class="count-label">Warnings</span>
+                        <strong>@result.Warnings.Count</strong>
+                    </div>
+                </div>
+
+                <p class="baseline-note">
+                    The first successful run creates the baseline. Current files are registered without being reported as new changes.
+                </p>
+            }
+            else
+            {
+                <div class="counts-grid">
+                    <div class="count-card">
+                        <span class="count-label">New files</span>
+                        <strong>@result.NewFiles.Count</strong>
+                    </div>
+                    <div class="count-card">
+                        <span class="count-label">Modified files</span>
+                        <strong>@result.ModifiedFiles.Count</strong>
+                    </div>
+                    <div class="count-card">
+                        <span class="count-label">Deleted files</span>
+                        <strong>@result.DeletedFiles.Count</strong>
+                    </div>
+                    <div class="count-card">
+                        <span class="count-label">Added directories</span>
+                        <strong>@result.NewDirectories.Count</strong>
+                    </div>
+                    <div class="count-card">
+                        <span class="count-label">Deleted directories</span>
+                        <strong>@result.DeletedDirectories.Count</strong>
+                    </div>
+                    <div class="count-card">
+                        <span class="count-label">Warnings</span>
+                        <strong>@result.Warnings.Count</strong>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</section>
+
+@if (result is not null && result.Status != "Analysis failed")
+{
+    <section class="results-grid">
+        <div class="panel">
+            <h2>New Files</h2>
+            @if (result.NewFiles.Count == 0)
+            {
+                <p class="empty-state">No new files detected.</p>
+            }
+            else
+            {
+                <ul class="result-list">
+                    @foreach (var file in result.NewFiles)
+                    {
+                        <li>
+                            <span class="result-path">@file.RelativePath</span>
+                            <strong class="result-version result-version-stacked">Version @file.CurrentVersion</strong>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="panel">
+            <h2>Modified Files</h2>
+            @if (result.ModifiedFiles.Count == 0)
+            {
+                <p class="empty-state">No modified files detected.</p>
+            }
+            else
+            {
+                <ul class="result-list">
+                    @foreach (var file in result.ModifiedFiles)
+                    {
+                        <li>
+                            <span class="result-path">@file.RelativePath</span>
+                            <strong class="result-version result-version-stacked">Version @(file.PreviousVersion ?? file.CurrentVersion) -> @file.CurrentVersion</strong>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="panel">
+            <h2>Added Directories</h2>
+            @if (result.NewDirectories.Count == 0)
+            {
+                <p class="empty-state">No added directories detected.</p>
+            }
+            else
+            {
+                <ul class="result-list">
+                    @foreach (var directory in result.NewDirectories)
+                    {
+                        <li>
+                            <span class="result-path">@directory</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="panel">
+            <h2>Deleted Files</h2>
+            @if (result.DeletedFiles.Count == 0)
+            {
+                <p class="empty-state">No deleted files detected.</p>
+            }
+            else
+            {
+                <ul class="result-list">
+                    @foreach (var file in result.DeletedFiles)
+                    {
+                        <li>
+                            <span class="result-path">@file</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="panel">
+            <h2>Deleted Directories</h2>
+            @if (result.DeletedDirectories.Count == 0)
+            {
+                <p class="empty-state">No deleted directories detected.</p>
+            }
+            else
+            {
+                <ul class="result-list">
+                    @foreach (var directory in result.DeletedDirectories)
+                    {
+                        <li>
+                            <span class="result-path">@directory</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="panel panel-wide">
+            <h2>Warnings</h2>
+            @if (result.Warnings.Count == 0)
+            {
+                <p class="empty-state">No warnings.</p>
+            }
+            else
+            {
+                <ul class="warning-list">
+                    @foreach (var warning in result.Warnings)
+                    {
+                        <li>
+                            <strong>@warning.RelativePath</strong>
+                            <span>@warning.Message</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </section>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

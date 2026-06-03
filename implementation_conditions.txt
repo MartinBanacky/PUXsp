@@ -1,0 +1,86 @@
+Implementation Conditions - PUXdesign Selection Task
+
+Stack and Shape
+- .NET 8
+- ASP.NET Core MVC
+- Local web application
+- No database
+- JSON persistence
+- Manual analysis triggered from UI
+
+Core Behavior
+- User enters a directory path and clicks Analyze.
+- The first successful analysis of a root creates a baseline.
+- Later analyses of the same root compare the current state against the previously saved snapshot for that root.
+- File changes are detected by content hash, not timestamp alone.
+- Files start at version 1 and increment by 1 for each detected content change.
+- Deleted files and deleted subdirectories must be reported.
+- Paths stored in snapshots should be relative to the analyzed root.
+
+Scan Rules
+- Sequential scan only for now.
+- Retry count is configurable in UI with allowed range 0..5.
+- If a file changes during reading, retry up to the configured limit.
+- If a file is still unstable after retries, do not block the whole scan.
+- If an unstable file already existed in the previous snapshot, keep its previous snapshot entry.
+- Add unstable-file warnings to the analysis result.
+- Do not attempt to fully detect files that change after they were already analyzed but before the whole scan finishes.
+- Post-scan stale-state risk remains a README limitation only.
+
+Persistence Rules
+- Build the updated snapshot in memory first.
+- Save snapshot only after a successful scan completes.
+- If the app is closed, the request is cancelled, or the process stops mid-scan, do not update the stored snapshot.
+- Persist snapshot atomically using a temporary file and replace the main snapshot file only after the full write succeeds.
+- One persistence file may store snapshots for multiple analyzed roots, keyed by normalized absolute root path.
+
+UI Rules
+- UI contains:
+  - directory path input
+  - retry count input
+  - analyze button
+  - result output
+- While analysis is running:
+  - disable the submit button
+  - show a visible blue or green "working" indicator so the user knows the app is alive
+
+Analyze Output
+- Analysis summary:
+  - analyzed path
+  - started time
+  - completed time
+  - duration
+  - retry count used
+  - status
+- Status values:
+  - Baseline created
+  - Analysis completed
+  - Analysis completed with warnings
+  - Analysis failed
+- Counts:
+  - new files
+  - modified files
+  - deleted files
+  - deleted directories
+  - unstable files
+- Sections:
+  - new files
+  - modified files with version information
+  - deleted files
+  - deleted directories
+  - warnings
+- Use relative paths in displayed result lists.
+- On first run:
+  - show baseline created
+  - show registered file and directory counts
+  - do not classify all current files as "new"
+
+Validation Rules
+- Reject empty path.
+- Reject non-existing path.
+- Reject path that is not a directory.
+- Reject inaccessible directory.
+- Handle deep directory trees normally, but treat Windows path-length or path-access failures as controlled errors or warnings depending on whether the scan can continue safely.
+
+Open Questions / Clarifications
+- If nested roots are analyzed separately, each analyzed root path should be treated as its own independent snapshot history unless explicitly restricted otherwise.

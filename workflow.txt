@@ -1,0 +1,32 @@
+Work Log - PUXdesign selection process
+
+Date: 2026-06-03
+Start: 21:30
+Checkpoint: 21:37
+Deadline: 23:59
+
+Task: Program code for selection process in SW company PUXdesign, Brno, CZ.
+
+Progress:
+- 21:30 Git repo created.
+- 21:37 Work log created.
+- 22:xx Decision made to use .NET 8 for the assignment.
+- 22:xx Task conditions reviewed and broken down into implementation requirements.
+- 22:xx Edge case discussion started for files changing during analysis.
+- 22:xx Limitation for non-transactional scans noted in README.
+- 22:xx Retry approach agreed for unstable files during analysis (configurable in UI, max 5).
+- 22:xx .gitignore added for .NET / ASP.NET Core stack.
+- 23:08 AGENTS.md created with project code conventions.
+- 23:08 implementation_conditions.txt created and finalized.
+- 23:08 README updated with versioning and deep-path limitations.
+- 23:08 Starting implementation phase.
+- 23:10 ASP.NET Core MVC project created in src/PUXsp.Web.
+- 23:18 Core scan, snapshot, retry, and JSON persistence functionality implemented.
+- 23:24 Initial UI for analyze flow and result sections completed.
+- 23:31 Large test data generator script added.
+- 23:36 Test data mutation script added.
+- 23:48 Result layout refined for readability of long paths.
+- 23:56 Final README and workflow updates in progress.
+
+Finish:
+- 00:00
