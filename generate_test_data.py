@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Generate nested test data for the PUXsp directory analyzer.
 
 Examples:
@@ -97,20 +97,28 @@ def name_from_index(index: int, prefix: str) -> str:
     return f"{prefix}_{first}_{second}_{third}_{index:03d}"
 
 
-def build_file_content(relative_path: str, file_index: int, target_size_bytes: int) -> str:
+def write_file_content(file_path: Path, relative_path: str, file_index: int, target_size_bytes: int) -> None:
     header = (
         f"Generated test file for PUXsp analyzer\n"
         f"Relative path: {relative_path}\n"
         f"File index: {file_index}\n"
         f"Lorem marker: {name_from_index(file_index, 'content')}\n\n"
-    )
+    ).encode("utf-8")
     filler_sentence = (
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n"
-    )
-    content = header
-    while len(content.encode("utf-8")) < target_size_bytes:
-        content += filler_sentence
-    return content
+    ).encode("utf-8")
+    chunk = filler_sentence * 512
+
+    written_bytes = 0
+    with file_path.open("wb") as handle:
+        handle.write(header)
+        written_bytes += len(header)
+
+        while written_bytes < target_size_bytes:
+            remaining_bytes = target_size_bytes - written_bytes
+            payload = chunk if remaining_bytes >= len(chunk) else chunk[:remaining_bytes]
+            handle.write(payload)
+            written_bytes += len(payload)
 
 
 def clean_directory(target_path: Path) -> None:
@@ -141,8 +149,7 @@ def generate_directory_tree(
         file_name = f"{name_from_index(file_index, 'file')}{extension}"
         file_path = current_path / file_name
         relative_path = file_path.relative_to(root_path).as_posix()
-        file_content = build_file_content(relative_path, file_index, file_size_bytes)
-        file_path.write_text(file_content, encoding="utf-8")
+        write_file_content(file_path, relative_path, file_index, file_size_bytes)
         counters["file"] += 1
 
     if remaining_depth <= 1:
