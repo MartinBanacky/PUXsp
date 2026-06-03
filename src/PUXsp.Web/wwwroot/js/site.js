@@ -8,6 +8,13 @@
   const runningState = document.getElementById("analysis-running");
 
   form.addEventListener("submit", () => {
+    if (window.jQuery) {
+      const validator = window.jQuery(form);
+      if (typeof validator.valid === "function" && !validator.valid()) {
+        return;
+      }
+    }
+
     if (submitButton instanceof HTMLButtonElement) {
       submitButton.disabled = true;
       submitButton.textContent = "Analyzing...";
